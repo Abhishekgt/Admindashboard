@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - E-Commerce Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="card auth-card">
+            <h2 class="text-center auth-title">Welcome Back</h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="email" class="form-label">Email address</label>
+                    <input type="email" class="form-control" id="email" required>
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" required>
+                </div>
+                <div id="errorMessage" class="alert alert-danger d-none"></div>
+                <button type="submit" class="btn btn-primary w-100 mb-3">Login</button>
+                <p class="text-center mb-0">
+                    Don't have an account? <a href="register.html" class="text-primary">Register here</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script type="module">
+        import { auth, database, ref, get } from './js/firebase-config.js';
+        import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+
+        const errorMessageDiv = document.getElementById('errorMessage');
+        const loginForm = document.getElementById('loginForm');
+
+        function showError(message) {
+            errorMessageDiv.textContent = message;
+            errorMessageDiv.classList.remove('d-none');
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessageDiv.classList.add('d-none');
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                if (!user) {
+                    showError('Authentication failed. Please try again.');
+                    return;
+                }
+
+                const snapshot = await get(ref(database, 'users/' + user.uid));
+                const userData = snapshot.val();
+                
+                if (!userData || !userData.role) {
+                    showError('User role not found. Please contact administrator.');
+                    return;
+                }
+
+                console.log('Login successful:', { email: user.email, role: userData.role });
+                sessionStorage.setItem('userRole', userData.role);
+                
+                const redirectUrl = userData.role === 'admin' ? 'admin-dashboard.html' : 'user-dashboard.html';
+                console.log('Redirecting to:', redirectUrl);
+                window.location.href = redirectUrl;
+            } catch (error) {
+                console.error('Login error:', error);
+                showError(error.message || 'Incorrect email or password!');
+            }
+        });
+    </script>
+</body>
+</html>
